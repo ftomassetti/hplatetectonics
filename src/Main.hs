@@ -3,9 +3,8 @@ module Main where
 import Data.Maybe
 import System.Random
 import qualified Data.Map.Strict as M
+import Graphics
 
-data Point = Point { pointX :: Int, pointY :: Int }
-             deriving (Eq, Ord)
 
 instance Show Point where
   show point = "(" ++ (show $ pointX point) ++ "," ++ (show $ pointY point) ++ ")"
@@ -123,9 +122,10 @@ generatePlates width height nplates = do
 
 main = do let seed   = 1
           setStdGen $ mkStdGen seed
-          let width  = 5
-          let height = 5
-          (owners,plates) <- generatePlates width height 3
+          let width  = 1024
+          let height = 1024
+          (owners,plates) <- generatePlates width height 20
+          saveMap width height owners "plates.png"
           --putStrLn $ "Plates: " ++ (show plates)
           --putStrLn $ "Owners: " ++ (show owners)
           --putStrLn $ "Owners: " ++ (show $ M.size owners)
