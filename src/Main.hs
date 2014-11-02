@@ -4,6 +4,8 @@ import Data.Maybe
 import System.Random
 import qualified Data.Map.Strict as M
 import Graphics
+import qualified HeightMap.Base as HB
+import qualified HeightMap.Mesh as HM
 
 
 instance Show Point where
@@ -120,10 +122,26 @@ generatePlates width height nplates = do
     let plates' = foldl (\m p -> M.insert (M.size m) p m) M.empty plates
     expandPlates width height plates'
 
+generateInitialHeighMap :: Int -> Int -> Int -> IO (HB.HeightMap (HB.Point Float))
+generateInitialHeighMap seed width height = do
+  let rg = mkStdGen seed
+
+  seed1 <- randomRIO (0.0, 1.0) :: IO Float
+  seed2 <- randomRIO (0.0, 1.0) :: IO Float
+  seed3 <- randomRIO (0.0, 1.0) :: IO Float
+  seed4 <- randomRIO (0.0, 1.0) :: IO Float
+
+  let heightMap = HB.unitHeightMap rg (width,height) seed1 seed2 seed3 seed4
+  return heightMap
+
 main = do let seed   = 1
           setStdGen $ mkStdGen seed
-          let width  = 1024
-          let height = 1024
+
+          let width  = 512
+          let height = 512
+
+          let heightMap = generateInitialHeighMap seed width height
+
           (owners,plates) <- generatePlates width height 20
           saveMap width height owners "plates.png"
           --putStrLn $ "Plates: " ++ (show plates)
