@@ -1,3 +1,5 @@
+{-# LANGUAGE ScopedTypeVariables #-}
+
 module Main where
 
 import Data.Maybe
@@ -6,7 +8,11 @@ import qualified Data.Map.Strict as M
 import Graphics
 import qualified HeightMap.Base as HB
 import qualified HeightMap.Mesh as HM
-
+import qualified Data.List as L
+import qualified Data.Array.Repa as R
+import Data.Array.Repa hiding ((++),map)
+import Data.Word (Word8)
+import Data.Array.Repa.IO.BMP
 
 instance Show Point where
   show point = "(" ++ (show $ pointX point) ++ "," ++ (show $ pointY point) ++ ")"
@@ -134,13 +140,43 @@ generateInitialHeighMap seed width height = do
   let heightMap = HB.unitHeightMap rg (width,height) seed1 seed2 seed3 seed4
   return heightMap
 
+-- Find the value v such as (quantile*100)% are below that value
+findQuantile :: Int -> Int -> HB.HeightMap (HB.Point Float) -> Float -> Float
+findQuantile width height heightmap quantile =
+    -- First we count how many cells stays in each bucket
+    -- where each bucket represent an interval of 0.01
+    let points :: [HB.Point Float] = R.toList heightmap
+        values = L.sort $ L.map HB.getHeight points
+    in values !! target
+    where target = round $ fromIntegral (width * height) * quantile
+
+-- take a map and set all the values below the threshold to the low value
+-- and all the values above to the high values
+polarize :: Float -> Float -> Float -> HB.HeightMap (HB.Point Float) -> HB.HeightMap (HB.Point Float)
+polarize th lowValue highValue heightmap = R.computeS $ R.map f heightmap
+                                           where f (HB.Point (x,y,value)) = let value' = if value < th then lowValue else highValue
+                                                                            in HB.Point (x, y, value')
+-- TODO avoid duplicating it
+float2bytes :: Float -> (Word8,Word8,Word8)
+float2bytes v = (b,b,b) where b = (floor $ 255.0 * v) :: Word8
+
 main = do let seed   = 1
           setStdGen $ mkStdGen seed
 
           let width  = 512
           let height = 512
 
-          let heightMap = generateInitialHeighMap seed width height
+          heightMap <- generateInitialHeighMap seed width height
+
+          let seaLevel = findQuantile width height heightMap 0.65
+          putStrLn $ "Sea level " ++ show seaLevel
+
+          let heightMap' = polarize seaLevel 0.1 1.0 heightMap
+
+          let hm = HB.reify $ R.map (\p -> float2bytes $ HB.getHeight p)
+                           $ heightMap'
+
+          writeImageToBMP "polarized" hm
 
           (owners,plates) <- generatePlates width height 20
           saveMap width height owners "plates.png"
