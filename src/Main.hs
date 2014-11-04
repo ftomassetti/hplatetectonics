@@ -17,7 +17,7 @@ import Data.Array.Repa.IO.BMP
 instance Show Point where
   show point = "(" ++ (show $ pointX point) ++ "," ++ (show $ pointY point) ++ ")"
 
-data Plate = Plate { plateExplorableBorders :: [Point] }
+data Plate = Plate { plateExplorableBorders :: [Point], plateVelocity :: Int, plateMomentum :: Int }
              deriving (Show)
 
 type PlateId = Int
@@ -124,7 +124,7 @@ expandPlates width height plates = do
 generatePlates :: Int -> Int -> Int -> IO (OwnerMap, PlatesMap)
 generatePlates width height nplates = do
     points <- randomDinstinctPoints width height nplates
-    let plates = map (\p -> Plate [p]) points
+    let plates = map (\p -> Plate [p] 0 0) points
     let plates' = foldl (\m p -> M.insert (M.size m) p m) M.empty plates
     expandPlates width height plates'
 
