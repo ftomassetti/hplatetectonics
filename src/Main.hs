@@ -17,8 +17,13 @@ import Data.Array.Repa.IO.BMP
 instance Show Point where
   show point = "(" ++ (show $ pointX point) ++ "," ++ (show $ pointY point) ++ ")"
 
-data Plate = Plate { plateExplorableBorders :: [Point], plateVelocity :: Int, plateMomentum :: Int }
+data Segment = Segment
+               deriving Show
+
+data Plate = Plate { plateExplorableBorders :: [Point], plateVelocity :: Int, plateMomentum :: Int, segments :: [Segment] }
              deriving (Show)
+
+createPlate point = Plate [point] 0 0 []
 
 type PlateId = Int
 
@@ -124,7 +129,7 @@ expandPlates width height plates = do
 generatePlates :: Int -> Int -> Int -> IO (OwnerMap, PlatesMap)
 generatePlates width height nplates = do
     points <- randomDinstinctPoints width height nplates
-    let plates = map (\p -> Plate [p] 0 0) points
+    let plates = map (\p -> createPlate p) points
     let plates' = foldl (\m p -> M.insert (M.size m) p m) M.empty plates
     expandPlates width height plates'
 
@@ -159,6 +164,15 @@ polarize th lowValue highValue heightmap = R.computeS $ R.map f heightmap
 -- TODO avoid duplicating it
 float2bytes :: Float -> (Word8,Word8,Word8)
 float2bytes v = (b,b,b) where b = (floor $ 255.0 * v) :: Word8
+
+
+simulationStep :: [Plate] -> [Plate]
+simulationStep plates = let totalVelocity       = L.foldr (\p acc -> acc + plateVelocity p) 0 plates
+                            momenta             = L.map plateMomentum plates
+                            systemKineticEnergy = L.foldr (+) 0 momenta
+                            maxKineticEnergy    = maximum momenta
+                            -- TODO restart part
+                        in plates
 
 main = do let seed   = 1
           setStdGen $ mkStdGen seed
