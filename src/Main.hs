@@ -7,71 +7,12 @@ import System.Random
 import qualified Data.Map.Strict as M
 import Graphics
 import qualified HeightMap.Base as HB
-import qualified HeightMap.Mesh as HM
 import qualified Data.List as L
 import qualified Data.Array.Repa as R
-import Data.Array.Repa hiding ((++),map)
 import Data.Word (Word8)
 import Data.Array.Repa.IO.BMP
-
-instance Show Point where
-  show point = "(" ++ (show $ pointX point) ++ "," ++ (show $ pointY point) ++ ")"
-
-data Segment = Segment
-               deriving Show
-
-data Plate = Plate { plateVelocity :: Int, plateMomentum :: Int, segments :: [Segment] }
-             deriving (Show)
-
-
--- Structure used just when building the plates
-data PlateBuilder = PlateBuilder { plateExplorableBorders :: [Point] }
-
------------------------------------------------------------
--- Plate
------------------------------------------------------------
-
-createPlate = Plate 0 0 []
-
-createPlateBuilder p = PlateBuilder [p]
-
-resetSegments plate = plate
-
-movePlate plate = plate
-
-type PlateId = Int
-
-randomPoint width height = do x <- randomRIO (0, (width-1))  :: IO Int
-                              y <- randomRIO (0, (height-1)) :: IO Int
-                              return $ Point x y
-
-randomDinstinctPoints :: Int -> Int -> Int -> IO [Point]
-randomDinstinctPoints width height nPoints
-    | (width*height) < nPoints = error "Cannot extract so many distinct points from such a map"
-    | otherwise = randomDistinctPoints' width height nPoints []
-randomDistinctPoints' width height 0       points = return points
-randomDistinctPoints' width height nPoints points = do point  <- randomPoint width height
-                                                       if point `elem` points
-                                                       then randomDistinctPoints' width height nPoints points
-                                                       else randomDistinctPoints' width height (nPoints-1) (point:points)
-
-
-type OwnerMap = M.Map Point PlateId
-type PlatesMap = M.Map PlateId Plate
-type PlateBuildersMap = M.Map PlateId PlateBuilder
-
-toroidalNorth width height point = let y = (pointY point) - 1
-                                   in if  y < 0 then point { pointY = y + height } else point { pointY = y }
-
-toroidalSouth width height point = let y = (pointY point) + 1
-                                   in if  y >= height then point { pointY = y - height } else point { pointY = y }
-
-toroidalEast width height point = let x = (pointX point) + 1
-                                   in if  x >= width then point { pointY = x - width } else point { pointX = x }
-
-toroidalWest width height point = let x = (pointX point) - 1
-                                   in if  x < 0 then point { pointX = x + width } else point { pointX = x }
-
+import Basic
+import Plate
 
 -- While at least one plate has a non empty explorableBorders
 -- expandPlates
