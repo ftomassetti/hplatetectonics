@@ -20,10 +20,24 @@ instance Show Point where
 data Segment = Segment
                deriving Show
 
-data Plate = Plate { plateExplorableBorders :: [Point], plateVelocity :: Int, plateMomentum :: Int, segments :: [Segment] }
+data Plate = Plate { plateVelocity :: Int, plateMomentum :: Int, segments :: [Segment] }
              deriving (Show)
 
-createPlate point = Plate [point] 0 0 []
+
+-- Structure used just when building the plates
+data PlateBuilder = PlateBuilder { plateExplorableBorders :: [Point] }
+
+-----------------------------------------------------------
+-- Plate
+-----------------------------------------------------------
+
+createPlate = Plate 0 0 []
+
+createPlateBuilder p = PlateBuilder [p]
+
+resetSegments plate = plate
+
+movePlate plate = plate
 
 type PlateId = Int
 
@@ -41,12 +55,10 @@ randomDistinctPoints' width height nPoints points = do point  <- randomPoint wid
                                                        then randomDistinctPoints' width height nPoints points
                                                        else randomDistinctPoints' width height (nPoints-1) (point:points)
 
---randomFromList [] =
---randomFromList l  = do let len = length l
---                       index <- randomRIO (0, (len-1))
 
 type OwnerMap = M.Map Point PlateId
 type PlatesMap = M.Map PlateId Plate
+type PlateBuildersMap = M.Map PlateId PlateBuilder
 
 toroidalNorth width height point = let y = (pointY point) - 1
                                    in if  y < 0 then point { pointY = y + height } else point { pointY = y }
@@ -63,29 +75,28 @@ toroidalWest width height point = let x = (pointX point) - 1
 
 -- While at least one plate has a non empty explorableBorders
 -- expandPlates
-expandPlates :: Int -> Int -> PlatesMap -> IO (OwnerMap, PlatesMap)
+expandPlates :: Int -> Int -> PlateBuildersMap -> IO (OwnerMap, PlatesMap)
 expandPlates width height plates = do
-    let owners = initialOwners (M.assocs plates) M.empty
-    --putStrLn $ "Initial owners: " ++ (show owners)
-    helper owners plates
-    where initialOwners :: [(PlateId,Plate)] -> OwnerMap -> OwnerMap
+    let owners :: OwnerMap = initialOwners (M.assocs plates) M.empty
+    (owners',plates') <- helper owners plates
+    let platesRes = M.map (\_ -> createPlate) plates'
+    return (owners', platesRes)
+    where initialOwners :: [(PlateId,PlateBuilder)] -> OwnerMap -> OwnerMap
           initialOwners [] owners = owners
           initialOwners ((id,plate):plateAssocs) owners = let point = head (plateExplorableBorders plate)
                                                           in initialOwners plateAssocs (M.insert point id owners)
-          helper :: OwnerMap -> PlatesMap -> IO (OwnerMap, PlatesMap)
+          helper :: OwnerMap -> PlateBuildersMap -> IO (OwnerMap, PlateBuildersMap)
           helper owners plates = let keepGoing = any (\p -> not $ null (plateExplorableBorders p)) (M.elems plates)
                                  in  if keepGoing
                                      then do (owners', plates') <- expandAll owners plates 0
                                              helper owners' plates'
-                                     else do --putStrLn $ "End condition : " ++ show plates
-                                             return (owners, plates)
-          expandAll :: OwnerMap -> PlatesMap -> PlateId -> IO (OwnerMap, PlatesMap)
-          expandAll owners plates i =    do --putStrLn $ "Expanding plate " ++ (show i)
-                                            (owners',plates') <- expandSingle owners plates i
+                                     else do return (owners, plates)
+          expandAll :: OwnerMap -> PlateBuildersMap -> PlateId -> IO (OwnerMap, PlateBuildersMap)
+          expandAll owners plates i =    do (owners',plates') <- expandSingle owners plates i
                                             if i==(M.size plates) -1
                                             then return (owners', plates')
                                             else expandAll owners' plates' (i+1)
-          expandSingle :: OwnerMap -> PlatesMap -> PlateId -> IO (OwnerMap, PlatesMap)
+          expandSingle :: OwnerMap -> PlateBuildersMap -> PlateId -> IO (OwnerMap, PlateBuildersMap)
           expandSingle owners plates id = do
               let p = fromJust $ M.lookup id plates
               let borders = plateExplorableBorders p
@@ -93,7 +104,6 @@ expandPlates width height plates = do
               then return (owners, plates)
               else do borderIndex <- randomRIO (0, length borders - 1)
                       let borderPoint = borders !! borderIndex
-                      --putStrLn $ "Expanding single plate " ++ (show id) ++ " index " ++ show borderIndex ++ " point " ++ show borderPoint
 
                       -- explore in all directions
                       let (owners', plates')       = expandIn owners plates id (toroidalNorth width height borderPoint)
@@ -101,21 +111,14 @@ expandPlates width height plates = do
                       let (owners''', plates''')   = expandIn owners'' plates'' id (toroidalEast width height borderPoint)
                       let (owners'''', plates'''') = expandIn owners''' plates''' id (toroidalWest width height borderPoint)
 
-                      --putStrLn $ "  north -> owners = " ++ (show owners') ++ " plates = " ++ (show plates')
-                      --putStrLn $ "  south -> owners = " ++ (show owners'') ++ " plates = " ++ (show plates'')
-                      --putStrLn $ "  east -> owners = " ++ (show owners''') ++ " plates = " ++ (show plates''')
-                      --putStrLn $ "  west-> owners = " ++ (show owners'''') ++ " plates = " ++ (show plates'''')
-
                       -- remove the point
                       let removedBorders = filter (\p -> p /= borderPoint)  (plateExplorableBorders (fromJust $ M.lookup id plates''''))
                       let p' = p { plateExplorableBorders = removedBorders }
                       let plates''''' = M.insert id p' plates''''
 
-                      --putStrLn $ "  -> owners = " ++ (show owners'''') ++ " plates = " ++ (show plates''''')
-
                       return (owners'''', plates''''')
 
-          expandIn :: OwnerMap -> PlatesMap -> PlateId -> Point -> (OwnerMap, PlatesMap)
+          expandIn :: OwnerMap -> PlateBuildersMap -> PlateId -> Point -> (OwnerMap, PlateBuildersMap)
           expandIn owners plates id point =
             if M.member point owners
             then (owners, plates) -- already owned, nothing to do
@@ -129,7 +132,7 @@ expandPlates width height plates = do
 generatePlates :: Int -> Int -> Int -> IO (OwnerMap, PlatesMap)
 generatePlates width height nplates = do
     points <- randomDinstinctPoints width height nplates
-    let plates = map (\p -> createPlate p) points
+    let plates = map (\p -> createPlateBuilder p) points
     let plates' = foldl (\m p -> M.insert (M.size m) p m) M.empty plates
     expandPlates width height plates'
 
@@ -172,7 +175,10 @@ simulationStep plates = let totalVelocity       = L.foldr (\p acc -> acc + plate
                             systemKineticEnergy = L.foldr (+) 0 momenta
                             maxKineticEnergy    = maximum momenta
                             -- TODO restart part
-                        in plates
+                            plates'             = L.map resetSegments plates
+                            -- TODO erosion part
+                            plates''            = L.map movePlate plates'
+                        in plates''
 
 main = do let seed   = 1
           setStdGen $ mkStdGen seed
