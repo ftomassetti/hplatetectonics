@@ -20,7 +20,7 @@ expandPlates :: Int -> Int -> PlateBuildersMap -> IO (OwnerMap, PlatesMap)
 expandPlates width height plates = do
     let owners :: OwnerMap = initialOwners (M.assocs plates) M.empty
     (owners',plates') <- helper owners plates
-    let platesRes = M.map (\_ -> createPlate) plates'
+    let platesRes = M.fromList $ map (\(id,_) -> (id,createPlate id)) (M.toList plates')
     return (owners', platesRes)
     where initialOwners :: [(PlateId,PlateBuilder)] -> OwnerMap -> OwnerMap
           initialOwners [] owners = owners
@@ -110,16 +110,25 @@ float2bytes :: Float -> (Word8,Word8,Word8)
 float2bytes v = (b,b,b) where b = (floor $ 255.0 * v) :: Word8
 
 
-simulationStep :: [Plate] -> [Plate]
-simulationStep plates = let totalVelocity       = L.foldr (\p acc -> acc + plateVelocity p) 0 plates
-                            momenta             = L.map plateMomentum plates
-                            systemKineticEnergy = L.foldr (+) 0 momenta
-                            maxKineticEnergy    = maximum momenta
-                            -- TODO restart part
-                            plates'             = L.map resetSegments plates
-                            -- TODO erosion part
-                            plates''            = L.map movePlate plates'
-                        in plates''
+data Cell = Cell { elevation :: Float, owner :: Maybe PlateId, age :: Int }
+type WorldMap = M.Map Point Cell
+
+createCell = Cell 0 Nothing 0
+allPoints world height = [Point x y | x <- [0..world], y <- [1..height]]
+
+simulationStep :: Int -> Int -> [Plate] ->[Plate]
+simulationStep width height plates =    let totalVelocity       = L.foldr (\p acc -> acc + plateVelocity p) 0 plates
+                                            momenta             = L.map plateMomentum plates
+                                            systemKineticEnergy = L.foldr (+) 0 momenta
+                                            maxKineticEnergy    = maximum momenta
+                                            -- TODO restart part
+                                            plates'             = L.map resetSegments plates
+                                            -- TODO erosion part
+                                            plates''            = L.map movePlate plates'
+                                            initialWorld        = foldl (\m p -> M.insert p createCell m) M.empty (allPoints width height)
+                                            world               = foldl processPlate initialWorld plates'
+                                        in plates''
+                                        where processPlate world plate = world
 
 main = do let seed   = 1
           setStdGen $ mkStdGen seed
