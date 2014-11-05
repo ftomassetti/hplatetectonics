@@ -9,9 +9,7 @@ import Data.Word
 import Data.Maybe
 import qualified Data.Map.Strict as M
 import Foreign.C.Types
-
-data Point = Point { pointX :: Int, pointY :: Int }
-             deriving (Eq, Ord)
+import Basic
 
 npAltitudeColor :: CFloat -> PixelRGB8
 npAltitudeColor elev = let f = elev

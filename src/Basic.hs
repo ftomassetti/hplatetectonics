@@ -1,7 +1,9 @@
 module Basic where
 
 import System.Random
-import Graphics
+
+data Point = Point { pointX :: Int, pointY :: Int }
+             deriving (Eq, Ord)
 
 instance Show Point where
   show point = "(" ++ (show $ pointX point) ++ "," ++ (show $ pointY point) ++ ")"
