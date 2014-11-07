@@ -1,12 +1,26 @@
 module Basic where
 
 import System.Random
+import qualified Data.List as L
+
+-- given a list it find continguous ranges
+ranges :: (Ord a, Enum a) => [a] -> [(a,a)]
+ranges [] = []
+ranges [x] = [(x,x)]
+ranges (x:xs) = buildRanges x x xs
+                where sortedXs = L.sort xs
+                      buildRanges :: (Ord a, Enum a) => a -> a -> [a] -> [(a,a)]
+                      buildRanges start current [] = [(start,current)]
+                      buildRanges start current (x:xs) = if x == succ current
+                                                         then buildRanges start x xs
+                                                         else (start,current):(buildRanges x x xs)
 
 data Point = Point { pointX :: Int, pointY :: Int }
              deriving (Eq, Ord)
 
 instance Show Point where
   show point = "(" ++ (show $ pointX point) ++ "," ++ (show $ pointY point) ++ ")"
+
 
 randomPoint width height = do x <- randomRIO (0, (width-1))  :: IO Int
                               y <- randomRIO (0, (height-1)) :: IO Int

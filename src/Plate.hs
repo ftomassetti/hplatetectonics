@@ -32,12 +32,14 @@ type OwnerMap = M.Map Point PlateId
 type PlatesMap = M.Map PlateId Plate
 type PlateBuildersMap = M.Map PlateId PlateBuilder
 
-
 -- Given it is a toroidal world, the left border is on the point most on the left,
--- unless the plate wraps aroung the world border. If it does the most left point
--- is actually
---plateLeft :: OwnerMap -> PlateId -> Int
---plateLeft ownerMap plateId = minimum . map pointX $ getPoints ownerMap plateId
+-- unless the plate wraps around the world border
+plateLeft :: OwnerMap -> Int -> PlateId -> Int
+plateLeft ownerMap worldWidth plateId = if length xRanges == 2 then fst $ xRanges !! 1 else fst $ xRanges !! 0
+                                        where xs = map pointX $ getPoints ownerMap plateId
+                                              --wrapping = xs `elem` 0 && xs `elem` (width-1)
+                                              xRanges = ranges xs
+
 
 --plateRight :: OwnerMap -> PlateId -> Int
 --plateRight ownerMap plateId = maximum . map pointX $ getPoints ownerMap plateId
