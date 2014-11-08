@@ -1,4 +1,3 @@
-# Created by .gitignore support plugin (hsz.mobi)
 ### Haskell template
 dist
 cabal-dev
