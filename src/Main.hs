@@ -14,13 +14,26 @@ import Data.Array.Repa.IO.BMP
 import Basic
 import Plate
 
+randAngle :: IO Float
+randAngle = do
+    r <- (randomRIO (0.0, 1.0) :: IO Float)
+    return $ r*2*pi
+
+randAngles :: Int -> IO [Float]
+randAngles 0 = return []
+randAngles n = do
+    angle <- randAngle
+    tail  <- randAngles $ n-1
+    return $ angle:tail
+
 -- While at least one plate has a non empty explorableBorders
 -- expandPlates
 expandPlates :: Int -> Int -> PlateBuildersMap -> IO (OwnerMap, PlatesMap)
 expandPlates width height plates = do
     let owners :: OwnerMap = initialOwners (M.assocs plates) M.empty
     (owners',plates') <- helper owners plates
-    let platesRes = M.fromList $ map (\(id,_) -> (id,createPlate id)) (M.toList plates')
+    angles <- randAngles (M.size plates)
+    let platesRes = M.fromList $ map (\((id,_),angle) -> (id,createPlate id angle)) (zip (M.toList plates') angles)
     return (owners', platesRes)
     where initialOwners :: [(PlateId,PlateBuilder)] -> OwnerMap -> OwnerMap
           initialOwners [] owners = owners

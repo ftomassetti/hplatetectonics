@@ -2,6 +2,8 @@ module Basic where
 
 import System.Random
 import qualified Data.List as L
+import qualified HeightMap.Base as HB
+
 
 -- given a list it find continguous ranges
 ranges :: (Ord a, Enum a) => [a] -> [(a,a)]
@@ -48,3 +50,5 @@ toroidalEast width height point = let x = (pointX point) + 1
 toroidalWest width height point = let x = (pointX point) - 1
                                    in if  x < 0 then point { pointX = x + width } else point { pointX = x }
 
+
+type ElevationMap = HB.HeightMap (HB.Point Float)
