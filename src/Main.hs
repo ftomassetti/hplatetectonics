@@ -20,11 +20,7 @@ randAngle = do
     return $ r*2*pi
 
 randAngles :: Int -> IO [Float]
-randAngles 0 = return []
-randAngles n = do
-    angle <- randAngle
-    tail  <- randAngles $ n-1
-    return $ angle:tail
+randAngles n = sequence $ replicate n randAngle
 
 -- While at least one plate has a non empty explorableBorders
 -- expandPlates
