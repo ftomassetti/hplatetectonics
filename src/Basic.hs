@@ -52,3 +52,5 @@ toroidalWest width height point = let x = (pointX point) - 1
 
 
 type ElevationMap = HB.HeightMap (HB.Point Float)
+
+data WorldDimension = WorldDimension { worldWidth :: Int, worldHeight :: Int }

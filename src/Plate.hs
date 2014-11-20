@@ -1,3 +1,8 @@
+-- This code is a tentative to implement in Haskell
+-- the algorithm brilliantly proposed in a maskter thesis from
+-- Viitanen Lauri
+-- http://www.theseus.fi/bitstream/handle/10024/40422/Viitanen_Lauri_2012_03_30.pdf
+
 module Plate where
 
 import Graphics hiding (Point)
@@ -7,9 +12,14 @@ import Basic
 import Data.Array.Repa
 import qualified Data.List as L
 
-data Segment = Segment
-               deriving Show
-
+-- A plate is rectangle grid, moving from some location at some speed
+-- The position is the top left corner of the plate in the lithosphere
+--
+-- For each cell of the plate we know both the amount of crust and the age
+--
+-- We need also to know the total mass and the center of mass of a plate
+--
+-- Each plate contains multiple Segments.
 data Plate = Plate {
                 plateId :: PlateId,
                 plateAge :: Int,
@@ -18,6 +28,12 @@ data Plate = Plate {
                 plateMomentum :: Int,
                 plateSegments :: [Segment] }
              deriving (Show)
+
+-- A segment contains the dimensions and surface area of a single continent
+-- within a plate. A continent is defined as a group of adjacent points that are
+-- all above the sea level. Each continent has an ID inside the plate
+data Segment = Segment
+               deriving Show
 
 
 -- Structure used just when building the plates

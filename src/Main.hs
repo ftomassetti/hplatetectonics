@@ -157,7 +157,7 @@ main = do let seed   = 1
 
           writeImageToBMP "polarized" hm
 
-          (owners,plates) <- generatePlates width height 20
+          (owners,plates) <- generatePlates width height 15
           saveMap width height owners "plates.png"
           --putStrLn $ "Plates: " ++ (show plates)
           --putStrLn $ "Owners: " ++ (show owners)
