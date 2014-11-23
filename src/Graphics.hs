@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Graphics where
 
@@ -12,6 +13,7 @@ import Foreign.C.Types
 import Basic
 import Geometry
 import Plate
+import Data.List
 
 npAltitudeColor :: CFloat -> PixelRGB8
 npAltitudeColor elev = let f = elev
@@ -43,13 +45,18 @@ pixelFun :: Int -> Int -> PixelRGB8
 pixelFun index nindexes = PixelRGB8 comp comp comp
                           where comp = fromIntegral $ (255 `div` nindexes)*index
 
---generateMap :: Int -> Int -> PlatesMap -> Image PixelRGB8
---generateMap w h map =  generateImage f w h
---                       where maxId = maximum (M.elems map)
---                             f x y = pixelFun (fromJust (M.lookup point map)) maxId
---                                     where point = Point x y
+drawElevMap :: Int -> Int -> ElevationMap -> Image PixelRGB8
+drawElevMap w h map =  generateImage f w h
+                       where maxElev = maximum (M.elems map)
+                             f x y = PixelRGB8 comp comp comp
+                                     where point = Point x y
+                                           elev' =  (M.lookup point map)
+                                           elev = case elev' of
+                                                    Nothing  -> error $ "Hey, it is Nothing " ++ show point
+                                                    Just e   -> e
+                                           comp :: Word8 = truncate $ (elev*255.0)/maxElev
 
---saveMap w h map filename = do let img = generateMap w h map
---                              writePng filename img
+saveElevMap w h map filename = do let img = drawElevMap w h map
+                                  writePng filename img
 
 

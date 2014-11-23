@@ -47,4 +47,6 @@ data WorldDimension = WorldDimension { worldWidth :: Int, worldHeight :: Int }
 type ElevationMap = M.Map Point Float
 
 getElevation :: ElevationMap -> Point -> Float
-getElevation elevMap point = fromJust $ M.lookup point elevMap
+getElevation elevMap point = case M.lookup point elevMap of
+                                Nothing -> error $ "Elevation map does not have point " ++ (show point)
+                                Just elev -> elev

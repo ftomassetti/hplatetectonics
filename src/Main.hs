@@ -100,9 +100,9 @@ main = do let seed   = 1
           writeImageToBMP "polarized" hm
 
           plates :: PlatesMap <- generatePlates width height (toElevationMap heightMap) 15
-          --saveMap width height plates "plates.png"
 
           let elevMap = lithoPlatesMapToElevationMap width height plates
+          saveElevMap width height elevMap "elev.png"
 
           return ()
 
