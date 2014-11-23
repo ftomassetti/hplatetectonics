@@ -10,6 +10,7 @@ import Data.Maybe
 import qualified Data.Map.Strict as M
 import Foreign.C.Types
 import Basic
+import Geometry
 
 npAltitudeColor :: CFloat -> PixelRGB8
 npAltitudeColor elev = let f = elev

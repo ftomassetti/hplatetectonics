@@ -12,79 +12,9 @@ import qualified Data.Array.Repa as R
 import Data.Word (Word8)
 import Data.Array.Repa.IO.BMP
 import Basic
+import Geometry
 import Plate
-
-randAngle :: IO Float
-randAngle = do
-    r <- (randomRIO (0.0, 1.0) :: IO Float)
-    return $ r*2*pi
-
-randAngles :: Int -> IO [Float]
-randAngles n = sequence $ replicate n randAngle
-
--- While at least one plate has a non empty explorableBorders
--- expandPlates
-expandPlates :: Int -> Int -> PlateBuildersMap -> IO (OwnerMap, PlatesMap)
-expandPlates width height plates = do
-    let owners :: OwnerMap = initialOwners (M.assocs plates) M.empty
-    (owners',plates') <- helper owners plates
-    angles <- randAngles (M.size plates)
-    let platesRes = M.fromList $ map (\((id,_),angle) -> (id,createPlate id angle)) (zip (M.toList plates') angles)
-    return (owners', platesRes)
-    where initialOwners :: [(PlateId,PlateBuilder)] -> OwnerMap -> OwnerMap
-          initialOwners [] owners = owners
-          initialOwners ((id,plate):plateAssocs) owners = let point = head (plateExplorableBorders plate)
-                                                          in initialOwners plateAssocs (M.insert point id owners)
-          helper :: OwnerMap -> PlateBuildersMap -> IO (OwnerMap, PlateBuildersMap)
-          helper owners plates = let keepGoing = any (\p -> not $ null (plateExplorableBorders p)) (M.elems plates)
-                                 in  if keepGoing
-                                     then do (owners', plates') <- expandAll owners plates 0
-                                             helper owners' plates'
-                                     else do return (owners, plates)
-          expandAll :: OwnerMap -> PlateBuildersMap -> PlateId -> IO (OwnerMap, PlateBuildersMap)
-          expandAll owners plates i =    do (owners',plates') <- expandSingle owners plates i
-                                            if i==(M.size plates) -1
-                                            then return (owners', plates')
-                                            else expandAll owners' plates' (i+1)
-          expandSingle :: OwnerMap -> PlateBuildersMap -> PlateId -> IO (OwnerMap, PlateBuildersMap)
-          expandSingle owners plates id = do
-              let p = fromJust $ M.lookup id plates
-              let borders = plateExplorableBorders p
-              if null borders
-              then return (owners, plates)
-              else do borderIndex <- randomRIO (0, length borders - 1)
-                      let borderPoint = borders !! borderIndex
-
-                      -- explore in all directions
-                      let (owners', plates')       = expandIn owners plates id (toroidalNorth width height borderPoint)
-                      let (owners'', plates'')     = expandIn owners' plates' id (toroidalSouth width height borderPoint)
-                      let (owners''', plates''')   = expandIn owners'' plates'' id (toroidalEast width height borderPoint)
-                      let (owners'''', plates'''') = expandIn owners''' plates''' id (toroidalWest width height borderPoint)
-
-                      -- remove the point
-                      let removedBorders = filter (\p -> p /= borderPoint)  (plateExplorableBorders (fromJust $ M.lookup id plates''''))
-                      let p' = p { plateExplorableBorders = removedBorders }
-                      let plates''''' = M.insert id p' plates''''
-
-                      return (owners'''', plates''''')
-
-          expandIn :: OwnerMap -> PlateBuildersMap -> PlateId -> Point -> (OwnerMap, PlateBuildersMap)
-          expandIn owners plates id point =
-            if M.member point owners
-            then (owners, plates) -- already owned, nothing to do
-            else let owners' = M.insert point id owners
-                     plate = fromJust $ M.lookup id plates
-                     borders' = point:plateExplorableBorders plate
-                     plate' = plate { plateExplorableBorders = borders' }
-                     plates' = M.insert id plate' plates
-                  in (owners',plates')
-
-generatePlates :: Int -> Int -> Int -> IO (OwnerMap, PlatesMap)
-generatePlates width height nplates = do
-    points <- randomDinstinctPoints width height nplates
-    let plates = map (\p -> createPlateBuilder p) points
-    let plates' = foldl (\m p -> M.insert (M.size m) p m) M.empty plates
-    expandPlates width height plates'
+import Lithosphere
 
 generateInitialHeighMap :: Int -> Int -> Int -> IO (HB.HeightMap (HB.Point Float))
 generateInitialHeighMap seed width height = do
@@ -97,6 +27,7 @@ generateInitialHeighMap seed width height = do
 
   let heightMap = HB.unitHeightMap rg (width,height) seed1 seed2 seed3 seed4
   return heightMap
+
 
 -- Find the value v such as (quantile*100)% are below that value
 findQuantile :: Int -> Int -> HB.HeightMap (HB.Point Float) -> Float -> Float
@@ -139,6 +70,18 @@ simulationStep width height plates =    let totalVelocity       = L.foldr (\p ac
                                         in plates''
                                         where processPlate world plate = world
 
+toElevationMap :: HB.HeightMap (HB.Point Float) -> ElevationMap
+toElevationMap hbMap = L.foldr addToMap M.empty points
+                       where points = R.toList hbMap
+                             width  = L.length $ L.nub $ L.map HB.getX points
+                             height = L.length $ L.nub $ L.map HB.getY points
+                             fwidth  :: Float = fromIntegral width
+                             fheight :: Float = fromIntegral height
+                             addToMap :: HB.Point Float -> ElevationMap -> ElevationMap
+                             addToMap (HB.Point (x,y,e)) elevMap = M.insert (Point ix iy) e elevMap
+                                                                   where ix :: Int = round $ x * fwidth
+                                                                         iy :: Int = round $ y * fheight
+
 main = do let seed   = 1
           setStdGen $ mkStdGen seed
 
@@ -150,18 +93,15 @@ main = do let seed   = 1
           let seaLevel = findQuantile width height heightMap 0.65
           putStrLn $ "Sea level " ++ show seaLevel
 
+          -- print a map that show the sea level
           let heightMap' = polarize seaLevel 0.1 1.0 heightMap
-
           let hm = HB.reify $ R.map (\p -> float2bytes $ HB.getHeight p)
                            $ heightMap'
-
           writeImageToBMP "polarized" hm
 
-          (owners,plates) <- generatePlates width height 15
-          saveMap width height owners "plates.png"
-          --putStrLn $ "Plates: " ++ (show plates)
-          --putStrLn $ "Owners: " ++ (show owners)
-          --putStrLn $ "Owners: " ++ (show $ M.size owners)
+          plates <- generatePlates width height (toElevationMap heightMap) 15
+          --(owners,plates) <- generatePlates width height 15
+          --saveMap width height owners "plates.png"
           return ()
 
 

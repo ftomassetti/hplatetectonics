@@ -1,7 +1,20 @@
+{-# LANGUAGE ScopedTypeVariables #-}
+
 module Lithosphere where
 
 import Basic
+import Geometry
 import Plate
+import qualified Data.Map.Strict as M
+import Data.Maybe
+import System.Random
+import qualified HeightMap.Base as HB
+import qualified Data.List as L
+
+type OwnerMap = M.Map Point PlateId
+
+getPointsOwned :: PlateId -> OwnerMap -> [Point]
+getPointsOwned id = M.keys . M.filterWithKey (\p id' -> id == id')
 
 data PlateTectonicsProcess = PlateTectonicsProcess {
     -- determines the amount of iterations, i.e. the number of
@@ -54,3 +67,86 @@ data Collision = Collision
 data Subduction = Subduction
 
 -- complexiveHeightmap: built by summing the contributions of the plates
+
+--generateLithosphere :: WorldDimension -> ElevationMap -> Int -> Lithosphere
+--generateLithosphere worldDim elevation nPlates =
+
+-- Structure used just when building the plates
+data PlateBuilder = PlateBuilder { plateExplorableBorders :: [Point] }
+
+createPlateBuilder p = PlateBuilder [p]
+
+type PlateBuildersMap = M.Map PlateId PlateBuilder
+
+-- While at least one plate has a non empty explorableBorders
+-- expandPlates
+expandPlates :: Int -> Int -> ElevationMap -> PlateBuildersMap -> IO PlatesMap
+expandPlates width height elevMap plates = do
+    let owners :: OwnerMap = initialOwners (M.assocs plates) M.empty
+    (owners',plates') <- helper owners plates
+    angles <- randAngles (M.size plates)
+    let platesRes = M.fromList $ map (\((id,_),angle) -> (id,createPlate' id angle owners' elevMap)) (zip (M.toList plates') angles)
+    return platesRes
+    where createPlate' :: PlateId -> Angle -> OwnerMap -> ElevationMap -> Plate
+          createPlate' id angle owners elevMap  = createPlate id angle cells
+                                                  where points :: [Point] = getPointsOwned id owners
+                                                        createCell :: Point -> ElevationMap -> PlateCell
+                                                        createCell point elevMap = PlateCell el 0
+                                                                                   where el :: Float = getElevation elevMap point
+                                                        cells = L.foldr (\p m -> M.insert p (createCell p elevMap) m) M.empty points
+
+          initialOwners :: [(PlateId,PlateBuilder)] -> OwnerMap -> OwnerMap
+          initialOwners [] owners = owners
+          initialOwners ((id,plate):plateAssocs) owners = let point = head (plateExplorableBorders plate)
+                                                          in initialOwners plateAssocs (M.insert point id owners)
+          helper :: OwnerMap -> PlateBuildersMap -> IO (OwnerMap, PlateBuildersMap)
+          helper owners plates = let keepGoing = any (\p -> not $ null (plateExplorableBorders p)) (M.elems plates)
+                                 in  if keepGoing
+                                     then do (owners', plates') <- expandAll owners plates 0
+                                             helper owners' plates'
+                                     else do return (owners, plates)
+          expandAll :: OwnerMap -> PlateBuildersMap -> PlateId -> IO (OwnerMap, PlateBuildersMap)
+          expandAll owners plates i =    do (owners',plates') <- expandSingle owners plates i
+                                            if i==(M.size plates) -1
+                                            then return (owners', plates')
+                                            else expandAll owners' plates' (i+1)
+          expandSingle :: OwnerMap -> PlateBuildersMap -> PlateId -> IO (OwnerMap, PlateBuildersMap)
+          expandSingle owners plates id = do
+              let p = fromJust $ M.lookup id plates
+              let borders = plateExplorableBorders p
+              if null borders
+              then return (owners, plates)
+              else do borderIndex <- randomRIO (0, length borders - 1)
+                      let borderPoint = borders !! borderIndex
+
+                      -- explore in all directions
+                      let (owners', plates')       = expandIn owners plates id (toroidalNorth width height borderPoint)
+                      let (owners'', plates'')     = expandIn owners' plates' id (toroidalSouth width height borderPoint)
+                      let (owners''', plates''')   = expandIn owners'' plates'' id (toroidalEast width height borderPoint)
+                      let (owners'''', plates'''') = expandIn owners''' plates''' id (toroidalWest width height borderPoint)
+
+                      -- remove the point
+                      let removedBorders = filter (\p -> p /= borderPoint)  (plateExplorableBorders (fromJust $ M.lookup id plates''''))
+                      let p' = p { plateExplorableBorders = removedBorders }
+                      let plates''''' = M.insert id p' plates''''
+
+                      return (owners'''', plates''''')
+
+          expandIn :: OwnerMap -> PlateBuildersMap -> PlateId -> Point -> (OwnerMap, PlateBuildersMap)
+          expandIn owners plates id point =
+            if M.member point owners
+            then (owners, plates) -- already owned, nothing to do
+            else let owners' = M.insert point id owners
+                     plate = fromJust $ M.lookup id plates
+                     borders' = point:plateExplorableBorders plate
+                     plate' = plate { plateExplorableBorders = borders' }
+                     plates' = M.insert id plate' plates
+                  in (owners',plates')
+
+generatePlates :: Int -> Int -> ElevationMap -> Int -> IO PlatesMap
+generatePlates width height elevMap nplates = do
+    points <- randomDinstinctPoints width height nplates
+    let plates = map (\p -> createPlateBuilder p) points
+    let plates' = foldl (\m p -> M.insert (M.size m) p m) M.empty plates
+    expandPlates width height elevMap plates'
+
