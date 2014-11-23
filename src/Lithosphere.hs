@@ -150,3 +150,22 @@ generatePlates width height elevMap nplates = do
     let plates' = foldl (\m p -> M.insert (M.size m) p m) M.empty plates
     expandPlates width height elevMap plates'
 
+lithoPlatesMapToElevationMap :: Int -> Int ->  PlatesMap -> ElevationMap
+lithoPlatesMapToElevationMap w h platesMap = L.foldr addPlate initialMap (M.elems platesMap)
+                                             where allPoints :: [Point]
+                                                   allPoints = [ Point x y | x <- [0..(w-1)], y <- [0..(h-1)]]
+                                                   initPoint :: Point -> ElevationMap -> ElevationMap
+                                                   initPoint p m = M.insert p 0.0 m
+                                                   initialMap :: ElevationMap
+                                                   initialMap = L.foldr initPoint M.empty allPoints
+                                                   addPlate :: Plate -> ElevationMap -> ElevationMap
+                                                   addPlate plate elevMap = L.foldr addPoint elevMap (platePoints plate)
+                                                                            where addPoint :: Point -> ElevationMap -> ElevationMap
+                                                                                  addPoint p m = let base :: Float = case M.lookup p m of
+                                                                                                                 Nothing -> 0.0
+                                                                                                                 Just value -> value
+                                                                                                     plateElev :: Float = platePointElevation p plate
+                                                                                                     newValue :: Float = base + plateElev
+                                                                                                 in M.insert p newValue m
+
+

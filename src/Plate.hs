@@ -5,7 +5,7 @@
 
 module Plate where
 
-import Graphics hiding (Point)
+-- import Graphics hiding (Point)
 import Geometry
 import qualified Data.Map.Strict as M
 import qualified HeightMap.Base as HB
@@ -13,6 +13,7 @@ import Basic
 import Data.Array.Repa
 import qualified Data.List as L
 import qualified Data.HashMap as HM
+import Data.Maybe
 
 -- A plate is rectangle grid, moving from some location at some speed
 -- The position is the top left corner of the plate in the lithosphere
@@ -52,6 +53,12 @@ createPlate id angle points = Plate id 0 1 angle points 0 []
 resetSegments plate = plate
 
 movePlate plate = plate
+
+platePoints plate = M.keys $ plateElevation plate
+
+platePointElevation :: Point -> Plate -> Float
+platePointElevation point plate = let cell = fromJust $ M.lookup point (plateElevation plate)
+                                  in  cellCrust cell
 
 type PlatesMap = M.Map PlateId Plate
 
