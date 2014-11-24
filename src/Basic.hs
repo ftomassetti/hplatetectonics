@@ -2,7 +2,6 @@ module Basic where
 
 import System.Random
 import qualified Data.List as L
-import qualified HeightMap.Base as HB
 
 type PlateId = Int
 

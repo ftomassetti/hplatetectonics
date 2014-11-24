@@ -8,7 +8,6 @@ import Plate
 import qualified Data.Map.Strict as M
 import Data.Maybe
 import System.Random
-import qualified HeightMap.Base as HB
 import qualified Data.List as L
 
 type OwnerMap = M.Map Point PlateId

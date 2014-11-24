@@ -5,15 +5,10 @@
 module Graphics where
 
 import Codec.Picture
-import Codec.Picture.Png
 import Data.Word
-import Data.Maybe
 import qualified Data.Map.Strict as M
 import Foreign.C.Types
-import Basic
 import Geometry
-import Plate
-import Data.List
 
 npAltitudeColor :: CFloat -> PixelRGB8
 npAltitudeColor elev = let f = elev

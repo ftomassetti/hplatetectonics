@@ -2,21 +2,14 @@
 
 module Main where
 
-import Data.Maybe
 import System.Random
-import qualified Data.Map.Strict as M
 import Graphics
 import qualified HeightMap.Base as HB
-import qualified Data.List as L
 import qualified Data.Array.Repa as R
-import Data.Word (Word8)
 import Data.Array.Repa.IO.BMP
-import Basic
-import Geometry
 import Plate
 import Lithosphere
 import PlatesGeneration
-
 
 main = do let seed   = 1
           setStdGen $ mkStdGen seed

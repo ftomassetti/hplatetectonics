@@ -1,10 +1,7 @@
 module Geometry where
 
 import System.Random
-import qualified HeightMap.Base as HB
 import qualified Data.Map.Strict as M
-import Basic
-import Data.Maybe
 
 data Point = Point { pointX :: Int, pointY :: Int }
              deriving (Eq, Ord)

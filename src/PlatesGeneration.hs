@@ -2,19 +2,15 @@
 
 module PlatesGeneration where
 
-import Data.Maybe
 import System.Random
 import qualified Data.Map.Strict as M
-import Graphics
 import qualified HeightMap.Base as HB
 import qualified Data.List as L
 import qualified Data.Array.Repa as R
 import Data.Word (Word8)
-import Data.Array.Repa.IO.BMP
 import Basic
 import Geometry
 import Plate
-import Lithosphere
 
 generateInitialHeightMap :: Int -> Int -> Int -> IO (HB.HeightMap (HB.Point Float))
 generateInitialHeightMap seed width height = do
