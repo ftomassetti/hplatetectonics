@@ -8,7 +8,6 @@ import PlatesGeneration
 import qualified Data.Array.Repa as R
 import qualified HeightMap.Base as HB
 
---test_generateInitialHeighMap :: IO ()
 test_generateInitialHeightMap = do
     heightMap :: HB.HeightMap (HB.Point Float) <- generateInitialHeightMap 1 512 512
     -- I would expect to hae 512x512 points all beteen 0.0 and 1.0
@@ -20,3 +19,16 @@ test_generateInitialHeightMap = do
     assertEqual True (ma <= 1.0)
     assertEqual True (mi >= 0.0)
     return ()
+
+test_toElevationMap = do
+    heightMap <- generateInitialHeightMap 1 512 512
+    let elevationMap = toElevationMap heightMap
+    return ()
+
+test_hbMapWidth = do
+    heightMap <- generateInitialHeightMap 1 123 456
+    assertEqual 123 (hbMapWidth heightMap)
+
+test_hbMapHeight = do
+    heightMap <- generateInitialHeightMap 1 123 456
+    assertEqual 456 (hbMapHeight heightMap)

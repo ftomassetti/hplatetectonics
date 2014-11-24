@@ -25,7 +25,7 @@ generateInitialHeightMap seed width height = do
   seed3 <- randomRIO (0.0, 1.0) :: IO Float
   seed4 <- randomRIO (0.0, 1.0) :: IO Float
 
-  let heightMap = HB.unitHeightMap rg (width,height) seed1 seed2 seed3 seed4
+  let heightMap = HB.unitHeightMap rg (height,width) seed1 seed2 seed3 seed4
   return heightMap
 
 
@@ -70,11 +70,21 @@ simulationStep width height plates =    let totalVelocity       = L.foldr (\p ac
                                         in plates''
                                         where processPlate world plate = world
 
+-- Visible for testing
+hbMapWidth :: HB.HeightMap (HB.Point Float) -> Int
+hbMapWidth hbMap = L.length $ L.nub $ L.map HB.getX points
+                   where points = R.toList hbMap
+
+-- Visible for testing
+hbMapHeight :: HB.HeightMap (HB.Point Float) -> Int
+hbMapHeight hbMap = L.length $ L.nub $ L.map HB.getY points
+                    where points = R.toList hbMap
+
 toElevationMap :: HB.HeightMap (HB.Point Float) -> ElevationMap
 toElevationMap hbMap = L.foldr addToMap M.empty points
                        where points = R.toList hbMap
-                             width  = L.length $ L.nub $ L.map HB.getX points
-                             height = L.length $ L.nub $ L.map HB.getY points
+                             width  = hbMapWidth hbMap
+                             height = hbMapHeight hbMap
                              fwidth  :: Float = fromIntegral width
                              fheight :: Float = fromIntegral height
                              addToMap :: HB.Point Float -> ElevationMap -> ElevationMap
