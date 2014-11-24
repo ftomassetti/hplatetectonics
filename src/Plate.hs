@@ -12,7 +12,7 @@ import qualified HeightMap.Base as HB
 import Basic
 import Data.Array.Repa
 import qualified Data.List as L
-import qualified Data.HashMap as HM
+--import qualified Data.HashMap as HM
 import Data.Maybe
 
 -- A plate is rectangle grid, moving from some location at some speed
