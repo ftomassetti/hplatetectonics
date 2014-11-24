@@ -7,6 +7,10 @@ import Test.Framework
 import PlatesGeneration
 import qualified Data.Array.Repa as R
 import qualified HeightMap.Base as HB
+import qualified Data.Map.Strict as M
+import qualified Data.List as L
+import Geometry
+import Control.Monad
 
 test_generateInitialHeightMap = do
     heightMap :: HB.HeightMap (HB.Point Float) <- generateInitialHeightMap 1 512 512
@@ -18,12 +22,15 @@ test_generateInitialHeightMap = do
     let mi :: Float = minimum values
     assertEqual True (ma <= 1.0)
     assertEqual True (mi >= 0.0)
-    return ()
 
 test_toElevationMap = do
-    heightMap <- generateInitialHeightMap 1 512 512
+    heightMap <- generateInitialHeightMap 1 100 200
     let elevationMap = toElevationMap heightMap
-    return ()
+    let keys = L.sort $ M.keys elevationMap
+    let expectedKeys = L.sort [Point x y | x <- [0..99], y <- [0..199] ]
+    assertEqual (100*200) (length keys)
+    forM expectedKeys (\ek ->
+        assertEqualVerbose ("Missing "++ show ek) True (ek `elem` keys))
 
 test_hbMapWidth = do
     heightMap <- generateInitialHeightMap 1 123 456

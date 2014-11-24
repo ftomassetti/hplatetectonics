@@ -11,6 +11,7 @@ import Data.Word (Word8)
 import Basic
 import Geometry
 import Plate
+import Data.Maybe
 
 generateInitialHeightMap :: Int -> Int -> Int -> IO (HB.HeightMap (HB.Point Float))
 generateInitialHeightMap seed width height = do
@@ -77,14 +78,12 @@ hbMapHeight hbMap = L.length $ L.nub $ L.map HB.getY points
                     where points = R.toList hbMap
 
 toElevationMap :: HB.HeightMap (HB.Point Float) -> ElevationMap
-toElevationMap hbMap = L.foldr addToMap M.empty points
+toElevationMap hbMap = L.foldl' addToMap M.empty points
                        where points = R.toList hbMap
-                             width  = hbMapWidth hbMap
-                             height = hbMapHeight hbMap
-                             fwidth  :: Float = fromIntegral width
-                             fheight :: Float = fromIntegral height
-                             addToMap :: HB.Point Float -> ElevationMap -> ElevationMap
-                             addToMap (HB.Point (x,y,e)) elevMap = M.insert (Point ix iy) e elevMap
-                                                                   where ix :: Int = round $ x * fwidth
-                                                                         iy :: Int = round $ y * fheight
+                             xs = L.sort $ L.nub $ L.map HB.getX points
+                             ys = L.sort $ L.nub $ L.map HB.getY points
+                             addToMap :: ElevationMap -> HB.Point Float -> ElevationMap
+                             addToMap elevMap (HB.Point (x,y,e)) = M.insert (Point ix iy) e elevMap
+                                                                   where ix :: Int = fromJust $ x `L.elemIndex` xs
+                                                                         iy :: Int = fromJust $ y `L.elemIndex` ys
 
