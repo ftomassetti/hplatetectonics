@@ -10,12 +10,15 @@ import Data.Array.Repa.IO.BMP
 import Plate
 import Lithosphere
 import PlatesGeneration
+import Geometry
 
 main = do let seed   = 1
           setStdGen $ mkStdGen seed
 
           let width  = 512
           let height = 512
+
+          let worldDim = WorldDimension width height
 
           heightMap <- generateInitialHeightMap seed width height
 
@@ -28,10 +31,7 @@ main = do let seed   = 1
                            $ heightMap'
           writeImageToBMP "polarized" hm
 
-          plates :: PlatesMap <- generatePlates width height (toElevationMap heightMap) 15
-
-          let elevMap = lithoPlatesMapToElevationMap width height plates
-          saveElevMap width height elevMap "elev.png"
+          let lithoshpere = generateLithosphere worldDim (toElevationMap heightMap) 15
 
           return ()
 
