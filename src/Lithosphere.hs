@@ -56,7 +56,7 @@ data PlateTectonicsProcess = PlateTectonicsProcess {
 
 data Lithosphere = Lithosphere {
     lithoWorldDim    :: WorldDimension,
-    lithoPlates      :: [Plate],
+    lithoPlates      :: PlatesMap,
     lithoCollisions  :: [Collision],
     lithoSubductions :: [Subduction]
 }
@@ -65,10 +65,16 @@ data Collision = Collision
 
 data Subduction = Subduction
 
--- complexiveHeightmap: built by summing the contributions of the plates
+generateLithosphere :: WorldDimension -> ElevationMap -> Int -> IO Lithosphere
+generateLithosphere worldDim elevation nPlates = do
+  let width = worldWidth worldDim
+  let height = worldHeight worldDim
+  platesMap <- generatePlates width height elevation nPlates
+  return $ Lithosphere worldDim platesMap [] []
 
---generateLithosphere :: WorldDimension -> ElevationMap -> Int -> Lithosphere
---generateLithosphere worldDim elevation nPlates =
+---
+--- Creating plates
+---
 
 -- Structure used just when building the plates
 data PlateBuilder = PlateBuilder { plateExplorableBorders :: [Point] }
@@ -76,6 +82,7 @@ data PlateBuilder = PlateBuilder { plateExplorableBorders :: [Point] }
 createPlateBuilder p = PlateBuilder [p]
 
 type PlateBuildersMap = M.Map PlateId PlateBuilder
+
 
 -- While at least one plate has a non empty explorableBorders
 -- expandPlates
@@ -148,6 +155,10 @@ generatePlates width height elevMap nplates = do
     let plates = map (\p -> createPlateBuilder p) points
     let plates' = foldl (\m p -> M.insert (M.size m) p m) M.empty plates
     expandPlates width height elevMap plates'
+
+---
+--- Exporting
+---
 
 lithoPlatesMapToElevationMap :: Int -> Int ->  PlatesMap -> ElevationMap
 lithoPlatesMapToElevationMap w h platesMap = L.foldr addPlate initialMap (M.elems platesMap)
